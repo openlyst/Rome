@@ -60,15 +60,14 @@ pub fn SettingsPage() -> Element {
                 style: "display: flex; flex-direction: column; gap: 8px;",
                 span { style: "color: {TEXT}; font-size: 14px; font-weight: 600;", "Auto Extract" }
                 div {
-                    style: "display: flex; align-items: center; gap: 10px;",
-                    input {
-                        r#type: "checkbox",
+                    style: "display: flex; align-items: center; gap: 12px;",
+                    ToggleSwitch {
                         checked: settings.auto_extract,
-                        onchange: move |e| {
+                        onchange: move |checked: bool| {
                             let mut s = state.settings.read().clone();
-                            s.auto_extract = e.checked();
+                            s.auto_extract = checked;
                             state.settings.set(s);
-                        },
+                        }
                     }
                     span { style: "color: {TEXT}; font-size: 14px;", "Extract archives after download" }
                 }
@@ -95,6 +94,23 @@ pub fn SettingsPage() -> Element {
                 p { style: "color: {TEXT_DIM}; font-size: 13px; margin: 0; line-height: 1.5;",
                     "Changes are saved automatically in memory. The download directory is used for all future downloads."
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn ToggleSwitch(checked: bool, onchange: EventHandler<bool>) -> Element {
+    let is_on = checked;
+    let track_bg = if is_on { ACCENT } else { BORDER };
+    let thumb_left = if is_on { "20px" } else { "2px" };
+
+    rsx! {
+        div {
+            onclick: move |_| onchange.call(!is_on),
+            style: "position: relative; width: 40px; height: 24px; background: {track_bg}; border-radius: 12px; cursor: pointer; transition: background 0.2s ease; flex-shrink: 0;",
+            div {
+                style: "position: absolute; top: 2px; left: {thumb_left}; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.2s ease;",
             }
         }
     }
