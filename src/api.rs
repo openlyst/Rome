@@ -139,6 +139,18 @@ fn parse_table_rows(document: &Html) -> Vec<Rom> {
             rating: String::new(),
             description: String::new(),
             image_url,
+            screen_url: String::new(),
+            crc: String::new(),
+            md5: String::new(),
+            sha1: String::new(),
+            graphics: String::new(),
+            sound: String::new(),
+            gameplay: String::new(),
+            overall: String::new(),
+            publisher: String::new(),
+            serial: String::new(),
+            file_name: String::new(),
+            verified: String::new(),
         });
     }
     roms
@@ -190,10 +202,98 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     rom.id = id.to_string();
     rom.description = description;
     rom.image_url = format!("https://dl.vimm.net/image.php?type=box&id={}", id);
+    rom.screen_url = format!("https://dl.vimm.net/image.php?type=screen&id={}", id);
 
     let title_sel = Selector::parse("h2").unwrap();
     if let Some(h2) = doc.select(&title_sel).next() {
         rom.name = extract_text(h2);
+    }
+
+    // Parse the detail table rows
+    let tr_sel = Selector::parse("tr").unwrap();
+    let td_sel = Selector::parse("td").unwrap();
+    let img_sel = Selector::parse("img").unwrap();
+    let span_sel = Selector::parse("span").unwrap();
+
+    for tr in doc.select(&tr_sel) {
+        let tds: Vec<_> = tr.select(&td_sel).collect();
+        if tds.len() < 3 {
+            continue;
+        }
+        let label = extract_text(tds[0]);
+        let value_td = tds[2];
+        let value = extract_text(value_td);
+
+        match label.as_str() {
+            "Region" => {
+                let mut parts = Vec::new();
+                for img in value_td.select(&img_sel) {
+                    if let Some(title) = img.value().attr("title") {
+                        parts.push(title.to_string());
+                    }
+                }
+                rom.region = if parts.is_empty() { value } else { parts.join(" / ") };
+            }
+            "Players" => rom.players = value,
+            "Year" => rom.year = value,
+            "Cart size" | "Disc size" | "File size" => rom.size = value,
+            "Graphics" => rom.graphics = value,
+            "Sound" => rom.sound = value,
+            "Gameplay" => rom.gameplay = value,
+            "Overall" => rom.overall = value.split_whitespace().next().unwrap_or(&value).to_string(),
+            "CRC" => {
+                for span in value_td.select(&span_sel) {
+                    if let Some(id_attr) = span.value().attr("id") {
+                        if id_attr == "data-crc" {
+                            rom.crc = extract_text(span);
+                        }
+                    }
+                }
+            }
+            "MD5" => {
+                for span in value_td.select(&span_sel) {
+                    if let Some(id_attr) = span.value().attr("id") {
+                        if id_attr == "data-md5" {
+                            rom.md5 = extract_text(span);
+                        }
+                    }
+                }
+            }
+            "SHA1" => {
+                for span in value_td.select(&span_sel) {
+                    if let Some(id_attr) = span.value().attr("id") {
+                        if id_attr == "data-sha1" {
+                            rom.sha1 = extract_text(span);
+                        }
+                    }
+                }
+            }
+            "Verified" => {
+                for span in value_td.select(&span_sel) {
+                    if let Some(id_attr) = span.value().attr("id") {
+                        if id_attr == "data-date" {
+                            rom.verified = extract_text(span);
+                        }
+                    }
+                }
+            }
+            "Version" => rom.version = value,
+            "Publisher" => rom.publisher = value,
+            _ if label.starts_with("Serial #") => rom.serial = value,
+            _ => {}
+        }
+    }
+
+    // Extract file name from data-good-title canvas
+    let good_title_sel = Selector::parse("#data-good-title canvas").unwrap();
+    if let Some(canvas) = doc.select(&good_title_sel).next() {
+        if let Some(data_v) = canvas.value().attr("data-v") {
+            if let Ok(decoded) = general_purpose::STANDARD.decode(data_v.trim()) {
+                if let Ok(s) = String::from_utf8(decoded) {
+                    rom.file_name = s;
+                }
+            }
+        }
     }
 
     Ok(rom)

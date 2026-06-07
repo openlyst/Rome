@@ -46,42 +46,120 @@ fn GameDetail(rom: Rom) -> Element {
 
     let rom_for_dl = rom.clone();
     let rom_page = rom.page_url.clone();
+    let rom_id_box = rom.id.clone();
+    let rom_id_screen = rom.id.clone();
 
-    let image_data = use_resource(move || {
-        let id = rom.id.clone();
+    let box_image = use_resource(move || {
+        let id = rom_id_box.clone();
         async move {
             api::fetch_image_data_url(&id, "box").await.ok()
         }
     });
 
+    let screen_image = use_resource(move || {
+        let id = rom_id_screen.clone();
+        async move {
+            api::fetch_image_data_url(&id, "screen").await.ok()
+        }
+    });
+
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 16px; max-width: 720px;",
+            style: "display: flex; flex-direction: column; gap: 20px;",
 
             h1 { style: "color: {TEXT}; margin: 0; font-size: 26px; font-weight: 700;", "{rom.name}" }
 
-            match &*image_data.read_unchecked() {
-                Some(Some(data_url)) => rsx! {
-                    img {
-                        src: data_url.clone(),
-                        style: "max-width: 200px; max-height: 280px; object-fit: contain; border-radius: 8px;",
+            div {
+                style: "display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;",
+
+                // Info table (left side)
+                div {
+                    style: "flex: 1; min-width: 280px; max-width: 420px;",
+                    div {
+                        style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden;",
+
+                        InfoRow { label: "Region", value: rom.region.clone() }
+                        InfoRow { label: "Players", value: rom.players.clone() }
+                        InfoRow { label: "Year", value: rom.year.clone() }
+                        if !rom.publisher.is_empty() {
+                            InfoRow { label: "Publisher", value: rom.publisher.clone() }
+                        }
+                        if !rom.serial.is_empty() {
+                            InfoRow { label: "Serial #", value: rom.serial.clone() }
+                        }
+                        if !rom.graphics.is_empty() {
+                            InfoRow { label: "Graphics", value: rom.graphics.clone() }
+                        }
+                        if !rom.sound.is_empty() {
+                            InfoRow { label: "Sound", value: rom.sound.clone() }
+                        }
+                        if !rom.gameplay.is_empty() {
+                            InfoRow { label: "Gameplay", value: rom.gameplay.clone() }
+                        }
+                        if !rom.overall.is_empty() {
+                            InfoRow { label: "Overall", value: rom.overall.clone() }
+                        }
+
+                        div { style: "border-top: 1px solid {BORDER};" }
+
+                        if !rom.file_name.is_empty() {
+                            InfoRow { label: "File", value: rom.file_name.clone() }
+                        }
+                        if !rom.crc.is_empty() {
+                            InfoRow { label: "CRC", value: rom.crc.clone() }
+                        }
+                        if !rom.md5.is_empty() {
+                            InfoRow { label: "MD5", value: rom.md5.clone() }
+                        }
+                        if !rom.sha1.is_empty() {
+                            InfoRow { label: "SHA1", value: rom.sha1.clone() }
+                        }
+                        if !rom.verified.is_empty() {
+                            InfoRow { label: "Verified", value: rom.verified.clone() }
+                        }
+                        if !rom.version.is_empty() {
+                            InfoRow { label: "Version", value: rom.version.clone() }
+                        }
+                        if !rom.size.is_empty() {
+                            InfoRow { label: "Size", value: rom.size.clone() }
+                        }
                     }
-                },
-                _ => rsx! { "" }
+                }
+
+                // Images (right side)
+                div {
+                    style: "display: flex; flex-direction: column; gap: 16px; flex: 1; min-width: 200px; max-width: 320px;",
+                    match &*screen_image.read_unchecked() {
+                        Some(Some(data_url)) => rsx! {
+                            div {
+                                style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
+                                img {
+                                    src: data_url.clone(),
+                                    style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                                }
+                                div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Title screen" }
+                            }
+                        },
+                        _ => rsx! { "" }
+                    }
+                    match &*box_image.read_unchecked() {
+                        Some(Some(data_url)) => rsx! {
+                            div {
+                                style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
+                                img {
+                                    src: data_url.clone(),
+                                    style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                                }
+                                div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Box" }
+                            }
+                        },
+                        _ => rsx! { "" }
+                    }
+                }
             }
 
             if !rom.description.is_empty() {
-                p { style: "color: {TEXT_DIM}; font-size: 14px; line-height: 1.5; margin: 0;", "{rom.description}" }
-            }
-
-            div {
-                style: "display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px;",
-                if !rom.region.is_empty() {
-                    InfoBadge { label: "Region".to_string(), value: rom.region.clone() }
-                }
-                if !rom.version.is_empty() {
-                    InfoBadge { label: "Version".to_string(), value: rom.version.clone() }
-                }
+                p { style: "color: {TEXT_DIM}; font-size: 14px; line-height: 1.5; margin: 0; max-width: 720px;", "{rom.description}" }
             }
 
             div {
@@ -114,12 +192,12 @@ fn GameDetail(rom: Rom) -> Element {
 }
 
 #[component]
-fn InfoBadge(label: String, value: String) -> Element {
+fn InfoRow(label: String, value: String) -> Element {
     rsx! {
         div {
-            style: "padding: 8px 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; display: flex; flex-direction: column; gap: 2px;",
-            span { style: "color: {TEXT_DIM}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;", "{label}" }
-            span { style: "color: {TEXT}; font-size: 13px; font-weight: 600;", "{value}" }
+            style: "display: flex; padding: 8px 12px; border-bottom: 1px solid {BORDER}; font-size: 13px;",
+            div { style: "color: {TEXT_DIM}; min-width: 90px; padding-right: 12px;", "{label}" }
+            div { style: "color: {TEXT}; flex: 1; word-break: break-word;", "{value}" }
         }
     }
 }

@@ -16,6 +16,18 @@ pub struct Rom {
     pub rating: String,
     pub description: String,
     pub image_url: String,
+    pub screen_url: String,
+    pub crc: String,
+    pub md5: String,
+    pub sha1: String,
+    pub graphics: String,
+    pub sound: String,
+    pub gameplay: String,
+    pub overall: String,
+    pub publisher: String,
+    pub serial: String,
+    pub file_name: String,
+    pub verified: String,
 }
 
 impl Rom {
@@ -35,6 +47,18 @@ impl Rom {
             rating: String::new(),
             description: String::new(),
             image_url: String::new(),
+            screen_url: String::new(),
+            crc: String::new(),
+            md5: String::new(),
+            sha1: String::new(),
+            graphics: String::new(),
+            sound: String::new(),
+            gameplay: String::new(),
+            overall: String::new(),
+            publisher: String::new(),
+            serial: String::new(),
+            file_name: String::new(),
+            verified: String::new(),
         }
     }
 }
