@@ -83,3 +83,25 @@ pub struct AppSettings {
     pub regions: Vec<i32>,
     pub version_filter: String, // "new", "old", "all"
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rom_has_image_url_field() {
+        let rom = Rom::new_basic(
+            "Super Mario Bros".to_string(),
+            "https://vimm.net/vault/12345".to_string(),
+            "https://dl.vimm.net/?mediaId=12345".to_string(),
+        );
+        assert!(rom.image_url.is_empty());
+    }
+
+    #[test]
+    fn game_box_art_url_format() {
+        let id = "34905";
+        let url = format!("https://dl.vimm.net/image.php?type=box&id={}", id);
+        assert_eq!(url, "https://dl.vimm.net/image.php?type=box&id=34905");
+    }
+}
