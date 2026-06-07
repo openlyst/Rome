@@ -53,6 +53,13 @@ fn GameDetail(rom: Rom) -> Element {
 
             h1 { style: "color: {TEXT}; margin: 0; font-size: 26px; font-weight: 700;", "{rom.name}" }
 
+            if !rom.image_url.is_empty() {
+                img {
+                    src: rom.image_url.clone(),
+                    style: "max-width: 200px; max-height: 280px; object-fit: contain; border-radius: 8px;",
+                }
+            }
+
             if !rom.description.is_empty() {
                 p { style: "color: {TEXT_DIM}; font-size: 14px; line-height: 1.5; margin: 0;", "{rom.description}" }
             }

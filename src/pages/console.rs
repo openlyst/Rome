@@ -96,10 +96,19 @@ fn RomCard(rom: Rom) -> Element {
                 state.current_rom.set(Some(rom.clone()));
                 let _ = nav.push(crate::Route::Game { id: rom_id.clone() });
             },
-            style: "padding: 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;",
-            div { style: "color: {TEXT}; font-size: 14px; font-weight: 600; line-height: 1.3;", "{rom.name}" }
-            div { style: "color: {TEXT_DIM}; font-size: 12px;", "{rom.region}" }
-            div { style: "color: {TEXT_DIM}; font-size: 11px;", "v{rom.version}" }
+            style: "padding: 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; cursor: pointer; display: flex; gap: 12px;",
+            if !rom.image_url.is_empty() {
+                img {
+                    src: rom.image_url.clone(),
+                    style: "width: 60px; height: 60px; object-fit: contain; border-radius: 4px; flex-shrink: 0;",
+                }
+            }
+            div {
+                style: "display: flex; flex-direction: column; gap: 6px;",
+                div { style: "color: {TEXT}; font-size: 14px; font-weight: 600; line-height: 1.3;", "{rom.name}" }
+                div { style: "color: {TEXT_DIM}; font-size: 12px;", "{rom.region}" }
+                div { style: "color: {TEXT_DIM}; font-size: 11px;", "v{rom.version}" }
+            }
         }
     }
 }
