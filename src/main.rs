@@ -63,7 +63,7 @@ fn main() {
             )
             .with_disable_context_menu(true)
             .with_background_color((13, 13, 18, 255))
-            .with_custom_head(r#"<style>body,html{margin:0;padding:0;background:#0d0d12;}select,option{background:#1a1a24;color:#e2e2ea;}</style>"#.to_string())
+            .with_custom_head(r#"<style>body,html{margin:0;padding:0;background:#0d0d12;}select,option{background:#1a1a24;color:#e2e2ea;}.sidebar{display:flex;}.bottom-nav{display:none;}.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;}@media(max-width:768px){.sidebar{display:none!important;}.bottom-nav{display:flex!important;position:fixed;bottom:0;left:0;right:0;height:56px;background:#16161d;border-top:1px solid #2a2a35;z-index:100;justify-content:space-around;align-items:center;padding-bottom:env(safe-area-inset-bottom,0);}.main-content{padding-bottom:56px;}}</style>"#.to_string())
         )
         .launch(App);
 }
