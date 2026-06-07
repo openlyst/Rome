@@ -99,7 +99,7 @@ fn extract_text(el: scraper::ElementRef) -> String {
     s.trim().to_string()
 }
 
-fn parse_table_rows(document: &Html) -> Vec<Rom> {
+fn parse_table_rows(document: &Html, system: &str) -> Vec<Rom> {
     let table_sel = Selector::parse("table.rounded.centered.cellpadding1.hovertable.striped").unwrap();
     let row_sel = Selector::parse("tr").unwrap();
     let td_sel = Selector::parse("td").unwrap();
@@ -173,7 +173,7 @@ fn parse_table_rows(document: &Html) -> Vec<Rom> {
             name,
             page_url,
             download_url,
-            system: String::new(),
+            system: system.to_string(),
             region,
             version,
             region_flags,
@@ -205,7 +205,7 @@ pub async fn search(query: &str, system: Option<&str>) -> Result<Vec<Rom>, Strin
     let resp = client().get(&url).send().await.map_err(|e| e.to_string())?;
     let text = resp.text().await.map_err(|e| e.to_string())?;
     let doc = Html::parse_document(&text);
-    Ok(parse_table_rows(&doc))
+    Ok(parse_table_rows(&doc, system.unwrap_or("")))
 }
 
 pub async fn fetch_section(console: &str, section: &str) -> Result<Vec<Rom>, String> {
@@ -222,7 +222,7 @@ pub async fn fetch_section(console: &str, section: &str) -> Result<Vec<Rom>, Str
     let resp = client().get(&url).send().await.map_err(|e| e.to_string())?;
     let text = resp.text().await.map_err(|e| e.to_string())?;
     let doc = Html::parse_document(&text);
-    let roms = parse_table_rows(&doc);
+    let roms = parse_table_rows(&doc, console);
 
     {
         let mut cache = SECTION_CACHE.lock().unwrap();
@@ -274,6 +274,23 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
         .unwrap_or("")
         .to_string();
 
+    let title_sel = Selector::parse("title").unwrap();
+    let system_from_title = doc.select(&title_sel)
+        .next()
+        .map(|t| extract_text(t))
+        .and_then(|title| {
+            title.rfind('(').and_then(|start| {
+                title.rfind(')').and_then(|end| {
+                    if end > start {
+                        Some(title[start + 1..end].to_string())
+                    } else {
+                        None
+                    }
+                })
+            })
+        })
+        .unwrap_or_default();
+
     let form_sel = Selector::parse("#dl_form").unwrap();
     let input_sel = Selector::parse("input[name=\"mediaId\"]").unwrap();
     let download_url = if let Some(form) = doc.select(&form_sel).next() {
@@ -301,6 +318,7 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
 
     let mut rom = Rom::new_basic(String::new(), url.clone(), download_url);
     rom.id = id.to_string();
+    rom.system = system_from_title;
     rom.description = description;
     rom.image_url = format!("https://dl.vimm.net/image.php?type=box&id={}", id);
     rom.screen_url = format!("https://dl.vimm.net/image.php?type=screen&id={}", id);
@@ -405,6 +423,27 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     Ok(rom)
 }
 
+pub async fn download_image(id: &str, image_type: &str, path: &str) -> Result<(), String> {
+    let url = format!("https://dl.vimm.net/image.php?type={}&id={}", image_type, id);
+    let resp = client()
+        .get(&url)
+        .header("Referer", format!("https://vimm.net/vault/{}", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
+    }
+    tokio::fs::write(path, &bytes).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub async fn fetch_image_data_url(id: &str, image_type: &str) -> Result<String, String> {
     let cache_key = format!("{}:{}", image_type, id);
 
@@ -464,6 +503,33 @@ pub async fn do_download(url: &str, path: &str) -> Result<(), String> {
         tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
     }
     tokio::fs::write(path, &bytes).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub async fn extract_zip(zip_path: &str, out_dir: &str) -> Result<(), String> {
+    let zip_path = zip_path.to_string();
+    let out_dir = out_dir.to_string();
+    tokio::task::spawn_blocking(move || {
+        let file = std::fs::File::open(&zip_path).map_err(|e| e.to_string())?;
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+            let outpath = std::path::Path::new(&out_dir).join(file.mangled_name());
+            if file.is_dir() {
+                std::fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
+            } else {
+                if let Some(p) = outpath.parent() {
+                    std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+                }
+                let mut outfile = std::fs::File::create(&outpath).map_err(|e| e.to_string())?;
+                std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+            }
+        }
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     Ok(())
 }
 

@@ -44,6 +44,7 @@ fn GameDetail(rom: Rom) -> Element {
     let mut state = use_context::<AppState>();
     let nav = use_navigator();
     let already_queued = state.downloads.read().iter().any(|d| d.rom.id == rom.id);
+    let already_downloaded = state.is_downloaded(&rom.id);
 
     let rom_for_dl = rom.clone();
     let rom_page = rom.page_url.clone();
@@ -169,7 +170,13 @@ fn GameDetail(rom: Rom) -> Element {
 
             div {
                 style: "display: flex; gap: 12px; margin-top: 8px;",
-                if already_queued {
+                if already_downloaded {
+                    button {
+                        disabled: true,
+                        style: "padding: 10px 24px; background: {BORDER}; color: {SUCCESS}; border: none; border-radius: 8px; font-size: 14px; cursor: default;",
+                        "Already Downloaded"
+                    }
+                } else if already_queued {
                     button {
                         disabled: true,
                         style: "padding: 10px 24px; background: {BORDER}; color: {TEXT_DIM}; border: none; border-radius: 8px; font-size: 14px; cursor: default;",

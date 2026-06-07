@@ -58,23 +58,6 @@ pub fn SettingsPage() -> Element {
 
             div {
                 style: "display: flex; flex-direction: column; gap: 8px;",
-                span { style: "color: {TEXT}; font-size: 14px; font-weight: 600;", "Auto Extract" }
-                div {
-                    style: "display: flex; align-items: center; gap: 12px;",
-                    ToggleSwitch {
-                        checked: settings.auto_extract,
-                        onchange: move |checked: bool| {
-                            let mut s = state.settings.read().clone();
-                            s.auto_extract = checked;
-                            state.settings.set(s);
-                        }
-                    }
-                    span { style: "color: {TEXT}; font-size: 14px;", "Extract archives after download" }
-                }
-            }
-
-            div {
-                style: "display: flex; flex-direction: column; gap: 8px;",
                 span { style: "color: {TEXT}; font-size: 14px; font-weight: 600;", "Version Filter" }
                 select {
                     onchange: move |e| {
