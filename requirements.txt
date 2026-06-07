@@ -1,4 +1,0 @@
-beautifulsoup4==4.13.*
-prettytable==3.16.*
-py7zr==0.22.*
-requests==2.32.*

@@ -6,19 +6,19 @@ Vimms-DL is a tool for downloading ROMs from the site [Vimm's Lair](https://vimm
 
 ## Installation
 
-If you run it with VSCode and Docker Desktop, you can have your docker environment ready with everything installed to make the script work.
-
-Otherwise, you'll need to setup a proper Python environment with the following constraints:
-- Use `conda`, `virtualenv` or any other Pythjon virtual environment manager
-- Python >= `3.9`
-
-Then, run:
+Requires [Rust](https://www.rust-lang.org/tools/install) (latest stable).
 
 ```bash
 git clone https://github.com/lballore/vimms-downloader.git
 cd vimms-downloader
-pip install -r requirements.txt
-python script.py
+cargo run --release
+```
+
+Or build and run directly:
+
+```bash
+cargo build --release
+./target/release/vimms
 ```
 
 ## Features
