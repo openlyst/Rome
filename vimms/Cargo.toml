@@ -1,0 +1,13 @@
+[package]
+name = "vimms"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["blocking", "cookies"] }
+scraper = "0.22"
+zip = "2.2"
+sevenz-rust = "0.6"
+regex = "1.11"
+rand = "0.8"
+lazy_static = "1.5"
