@@ -6,11 +6,35 @@ use crate::Route;
 #[component]
 pub fn AppShell() -> Element {
     use_context_provider(|| AppState::new());
+    let mut sidebar_width = use_signal(|| 220_i32);
+    let mut is_dragging = use_signal(|| false);
 
     rsx! {
         div {
-            style: "display: flex; height: 100vh; width: 100vw; background: {BG}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;",
-            Sidebar {}
+            style: "display: flex; height: 100vh; width: 100vw; background: {BG}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; user-select: none;",
+            onmousemove: move |e| {
+                if *is_dragging.read() {
+                    let x = e.client_coordinates().x as i32;
+                    let new_width = x.max(160).min(400);
+                    sidebar_width.set(new_width);
+                }
+            },
+            onmouseup: move |_| {
+                is_dragging.set(false);
+            },
+
+            Sidebar { width: *sidebar_width.read() }
+
+            div {
+                style: "width: 4px; cursor: col-resize; background: transparent; position: relative; flex-shrink: 0;",
+                onmousedown: move |_| {
+                    is_dragging.set(true);
+                },
+                div {
+                    style: "position: absolute; top: 0; bottom: 0; left: 1px; width: 2px; background: {BORDER}; transition: background 0.15s;",
+                }
+            }
+
             div {
                 class: "main-content",
                 style: "flex: 1; display: flex; flex-direction: column; overflow: hidden;",
@@ -22,13 +46,13 @@ pub fn AppShell() -> Element {
 }
 
 #[component]
-fn Sidebar() -> Element {
+fn Sidebar(width: i32) -> Element {
     let current = use_route::<Route>();
 
     rsx! {
         div {
             class: "sidebar",
-            style: "width: 220px; min-width: 220px; background: {SURFACE}; border-right: 1px solid {BORDER}; display: flex; flex-direction: column; padding: 16px; gap: 4px;",
+            style: "width: {width}px; min-width: {width}px; background: {SURFACE}; border-right: 1px solid {BORDER}; display: flex; flex-direction: column; padding: 16px; gap: 4px; box-sizing: border-box; overflow: hidden;",
 
             div {
                 style: "display: flex; align-items: center; gap: 8px; padding: 8px 4px 20px 4px;",
