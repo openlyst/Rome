@@ -55,10 +55,10 @@ pub fn SettingsPage() -> Element {
                         s.version_filter = e.value();
                         state.settings.set(s);
                     },
-                    style: "padding: 10px 12px; background: {CARD}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 6px; font-size: 14px; outline: none;",
-                    option { value: "new", selected: settings.version_filter == "new", "Newest Only" }
-                    option { value: "old", selected: settings.version_filter == "old", "Oldest Only" }
-                    option { value: "all", selected: settings.version_filter == "all", "Show All" }
+                    style: "padding: 10px 12px; background: {CARD}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 6px; font-size: 14px; outline: none; appearance: none; -webkit-appearance: none;",
+                    option { value: "new", selected: settings.version_filter == "new", style: "background: {CARD}; color: {TEXT};", "Newest Only" }
+                    option { value: "old", selected: settings.version_filter == "old", style: "background: {CARD}; color: {TEXT};", "Oldest Only" }
+                    option { value: "all", selected: settings.version_filter == "all", style: "background: {CARD}; color: {TEXT};", "Show All" }
                 }
             }
 

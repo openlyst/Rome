@@ -63,7 +63,7 @@ fn main() {
             )
             .with_disable_context_menu(true)
             .with_background_color((13, 13, 18, 255))
-            .with_custom_head(r#"<style>body,html{margin:0;padding:0;background:#0d0d12;}</style>"#.to_string())
+            .with_custom_head(r#"<style>body,html{margin:0;padding:0;background:#0d0d12;}select,option{background:#1a1a24;color:#e2e2ea;}</style>"#.to_string())
         )
         .launch(App);
 }
