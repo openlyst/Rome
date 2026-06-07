@@ -74,7 +74,7 @@ fn GameDetail(rom: Rom) -> Element {
 
                 // Info table (left side)
                 div {
-                    style: "flex: 1; min-width: 280px; max-width: 420px;",
+                    style: "flex: 2 1 280px;",
                     div {
                         style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden;",
 
@@ -128,7 +128,7 @@ fn GameDetail(rom: Rom) -> Element {
 
                 // Images (right side)
                 div {
-                    style: "display: flex; flex-direction: column; gap: 16px; flex: 1; min-width: 200px; max-width: 320px;",
+                    style: "display: flex; flex-direction: column; gap: 16px; flex: 1 1 220px;",
                     match &*screen_image.read_unchecked() {
                         Some(Some(data_url)) => rsx! {
                             div {
