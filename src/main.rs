@@ -59,6 +59,7 @@ fn main() {
                 dioxus::desktop::WindowBuilder::new()
                     .with_title("Vimm's Lair Downloader")
                     .with_inner_size(dioxus::desktop::LogicalSize::new(1200, 800))
+                    .with_decorations(false)
             )
             .with_disable_context_menu(true)
             .with_background_color((13, 13, 18, 255))
