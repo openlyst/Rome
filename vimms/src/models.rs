@@ -126,3 +126,88 @@ impl Default for Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rom_new() {
+        let rom = Rom::new(
+            "Super Mario Bros".to_string(),
+            "https://vimm.net/vault/1234".to_string(),
+            "https://dl2.vimm.net/download?mediaId=1234".to_string(),
+            "NES".to_string(),
+            "USA".to_string(),
+            "1.0".to_string(),
+        );
+        assert_eq!(rom.name, "Super Mario Bros");
+        assert_eq!(rom.system, "NES");
+        assert_eq!(rom.region, "USA");
+        assert_eq!(rom.version, "1.0");
+    }
+
+    #[test]
+    fn test_rom_new_basic() {
+        let rom = Rom::new_basic(
+            "Zelda".to_string(),
+            "https://vimm.net/vault/5678".to_string(),
+            "https://dl2.vimm.net/download?mediaId=5678".to_string(),
+        );
+        assert_eq!(rom.name, "Zelda");
+        assert!(rom.system.is_empty());
+        assert!(rom.region.is_empty());
+        assert!(rom.version.is_empty());
+    }
+
+    #[test]
+    fn test_section_of_roms_new() {
+        let roms = vec![
+            Rom::new_basic("Game1".to_string(), "/1".to_string(), "/dl1".to_string()),
+        ];
+        let section = SectionOfRoms::new("A".to_string(), roms);
+        assert_eq!(section.section, "A");
+        assert_eq!(section.roms.len(), 1);
+        assert!(section.path.is_empty());
+    }
+
+    #[test]
+    fn test_search_selection_default() {
+        let ss = SearchSelection::default();
+        assert!(ss.system.is_empty());
+        assert!(ss.query.is_empty());
+    }
+
+    #[test]
+    fn test_bulk_system_roms_new() {
+        let sections = vec![SectionOfRoms::new("A".to_string(), vec![])];
+        let bsr = BulkSystemRoms::new(sections, "NES".to_string(), "Nintendo NES".to_string());
+        assert_eq!(bsr.system, "NES");
+        assert_eq!(bsr.system_name, "Nintendo NES");
+        assert_eq!(bsr.sections.len(), 1);
+    }
+
+    #[test]
+    fn test_search_new() {
+        let ss = SearchSelection {
+            system: "NES".to_string(),
+            query: "mario".to_string(),
+        };
+        let search = Search::new(ss);
+        assert_eq!(search.search_selections.system, "NES");
+        assert_eq!(search.search_selections.query, "mario");
+        assert!(!search.general);
+    }
+
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+        assert!(config.selections.is_empty());
+        assert!(!config.all);
+        assert!(!config.extract);
+        assert!(!config.search_mode);
+        assert!(!config.bulk_mode);
+        assert!(config.query_selection.system.is_empty());
+        assert!(config.query_selection.query.is_empty());
+    }
+}

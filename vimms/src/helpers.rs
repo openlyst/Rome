@@ -302,3 +302,126 @@ impl VimmsLairHelper {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::SectionOfRoms;
+
+    #[test]
+    fn test_vimms_lair_helper_new() {
+        let helper = VimmsLairHelper::new();
+        assert_eq!(helper.roms_directory, "ROMS");
+        assert_eq!(helper.search_version, "new");
+        assert_eq!(helper.countries, vec![8, 14, 26]);
+        assert!(!helper.all_countries);
+    }
+
+    #[test]
+    fn test_selection_to_uri() {
+        let helper = VimmsLairHelper::new();
+        assert_eq!(helper.selection_to_uri("Nintendo NES"), "NES");
+        assert_eq!(helper.selection_to_uri("Super Nintendo"), "SNES");
+        assert_eq!(helper.selection_to_uri("Nintendo 64"), "N64");
+        assert_eq!(helper.selection_to_uri("Playstation"), "PS1");
+        assert_eq!(helper.selection_to_uri("Nonexistent Console"), "");
+    }
+
+    #[test]
+    fn test_get_selection_from_num() {
+        let helper = VimmsLairHelper::new();
+        let keys: Vec<&str> = CONSOLES.keys().cloned().collect();
+        assert_eq!(helper.get_selection_from_num(0), keys[0]);
+        assert_eq!(helper.get_selection_from_num(1), keys[1]);
+        // Out of bounds should return empty string
+        assert_eq!(helper.get_selection_from_num(999), "");
+    }
+
+    #[test]
+    fn test_get_random_ua() {
+        let helper = VimmsLairHelper::new();
+        let ua1 = helper.get_random_ua();
+        let ua2 = helper.get_random_ua();
+        // Both should be from the known list
+        assert!(USER_AGENTS.contains(&ua1.as_str()));
+        assert!(USER_AGENTS.contains(&ua2.as_str()));
+    }
+
+    #[test]
+    fn test_get_search_url_system() {
+        let helper = VimmsLairHelper::new();
+        let ss = SearchSelection {
+            system: "Nintendo NES".to_string(),
+            query: "contra".to_string(),
+        };
+        let url = helper.get_search_url(&ss);
+        assert!(url.contains("https://vimm.net/vault/?p=list&action=filters&system=NES&q=contra"));
+        assert!(url.contains("version=new"));
+    }
+
+    #[test]
+    fn test_get_search_url_general() {
+        let helper = VimmsLairHelper::new();
+        let ss = SearchSelection {
+            system: "general".to_string(),
+            query: "metroid".to_string(),
+        };
+        let url = helper.get_search_url(&ss);
+        assert!(url.contains("https://vimm.net/vault/?p=list&action=filters&q=metroid"));
+        assert!(!url.contains("system="));
+        assert!(url.contains("version=new"));
+    }
+
+    #[test]
+    fn test_add_url_filters() {
+        let helper = VimmsLairHelper::new();
+        let base = "https://vimm.net/vault/?p=list&action=filters&system=NES&q=mario";
+        let result = helper.add_url_filters(base);
+        assert!(result.contains("version=new"));
+        assert!(result.contains("countries%5B%5D=8"));
+        assert!(result.contains("countries%5B%5D=14"));
+        assert!(result.contains("countries%5B%5D=26"));
+    }
+
+    #[test]
+    fn test_add_url_filters_all_countries() {
+        let mut helper = VimmsLairHelper::new();
+        helper.all_countries = true;
+        helper.countries.clear();
+        let base = "https://vimm.net/vault/?p=list&action=filters&q=mario";
+        let result = helper.add_url_filters(base);
+        assert!(result.contains("countries_all=1"));
+    }
+
+    #[test]
+    fn test_consoles_map_populated() {
+        assert!(!CONSOLES.is_empty());
+        assert!(CONSOLES.contains_key("Nintendo NES"));
+        assert!(CONSOLES.contains_key("Playstation 2"));
+        assert_eq!(CONSOLES.get("Nintendo NES"), Some(&"NES"));
+    }
+
+    #[test]
+    fn test_countries_map_populated() {
+        assert!(!COUNTRIES.is_empty());
+        assert_eq!(COUNTRIES.get(&25), Some(&"USA"));
+        assert_eq!(COUNTRIES.get(&8), Some(&"Europe"));
+    }
+
+    #[test]
+    fn test_generate_path_to_bulk_roms() {
+        let helper = VimmsLairHelper::new();
+        let mut roms = vec![BulkSystemRoms::new(
+            vec![
+                SectionOfRoms::new("section=number".to_string(), vec![]),
+                SectionOfRoms::new("section=A".to_string(), vec![]),
+            ],
+            "NES".to_string(),
+            "Nintendo NES".to_string(),
+        )];
+        helper.generate_path_to_bulk_roms(&mut roms, "/tmp/test");
+
+        assert!(roms[0].sections[0].path.contains("#"));
+        assert!(roms[0].sections[1].path.contains("A"));
+    }
+}

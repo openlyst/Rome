@@ -1,6 +1,3 @@
-mod helpers;
-mod models;
-
 use regex::Regex;
 use reqwest::blocking::Client;
 use scraper::{Html, Selector};
@@ -9,8 +6,8 @@ use std::path::Path;
 use std::fs::{self, File};
 use zip::ZipArchive;
 
-use helpers::{VimmsLairHelper, CONSOLES};
-use models::{BulkSystemRoms, Config, Rom, SearchSelection, SectionOfRoms};
+use vimms::helpers::{VimmsLairHelper, CONSOLES};
+use vimms::models::{BulkSystemRoms, Config, Rom, SearchSelection, SectionOfRoms};
 
 fn get_rom_download_url(vimmslair_helper: &VimmsLairHelper, page_url: &str) -> String {
     let mut download_id = String::new();
@@ -70,7 +67,7 @@ fn get_section_of_roms(vimmslair_helper: &VimmsLairHelper, section: &str) -> Vec
                     for row in table.select(&row_selector) {
                         let tds: Vec<_> = row.select(&td_selector).collect();
                         if let Some(first_td) = tds.first() {
-                            if let Some(rom_a) = first_td.select(&a_selector).next() {
+                            if let Some(rom_a) = first_td.select(&a_selector).find(|a| !a.text().collect::<String>().trim().is_empty()) {
                                 let name = rom_a.text().collect::<String>().trim().to_string();
                                 let href = rom_a.value().attr("href").unwrap_or("").to_string();
                                 let page_url = format!("{}{}", VimmsLairHelper::VIMMS_LAIR_BASE_URL, href);
@@ -268,7 +265,7 @@ fn get_search_section(vimmslair_helper: &VimmsLairHelper, search_selection: &Sea
                         let version_td = row_tds.get(2);
 
                         if let Some(first_td) = rom_name_td {
-                            if let Some(rom_a) = first_td.select(&a_selector).next() {
+                            if let Some(rom_a) = first_td.select(&a_selector).find(|a| !a.text().collect::<String>().trim().is_empty()) {
                                 let mut name = rom_a.text().collect::<String>().trim().to_string();
                                 if let Some(red_border) = first_td.select(&b_selector).next() {
                                     if let Some(title) = red_border.value().attr("title") {
