@@ -53,6 +53,17 @@ fn main() {
     #[cfg(target_os = "linux")]
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
 
+    let filter = tracing_subscriber::EnvFilter::from_default_env()
+        .add_directive("vimms=info".parse().unwrap())
+        .add_directive("hyper=warn".parse().unwrap())
+        .add_directive("hyper_util=warn".parse().unwrap())
+        .add_directive("reqwest=warn".parse().unwrap())
+        .add_directive("dioxus=warn".parse().unwrap());
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .init();
+
     dioxus::LaunchBuilder::desktop()
         .with_cfg(dioxus::desktop::Config::new()
             .with_window(

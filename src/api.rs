@@ -14,9 +14,29 @@ lazy_static! {
     static ref SECTION_CACHE: Mutex<HashMap<String, Vec<Rom>>> = Mutex::new(HashMap::new());
 }
 
-fn client() -> reqwest::Client {
+pub fn client() -> reqwest::Client {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::USER_AGENT,
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+            .parse()
+            .unwrap(),
+    );
+    headers.insert(
+        reqwest::header::ACCEPT,
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            .parse()
+            .unwrap(),
+    );
+    headers.insert(
+        reqwest::header::ACCEPT_LANGUAGE,
+        "en-US,en;q=0.5".parse().unwrap(),
+    );
+
     reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .default_headers(headers)
         .build()
         .unwrap()
 }
@@ -257,11 +277,23 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     let form_sel = Selector::parse("#dl_form").unwrap();
     let input_sel = Selector::parse("input[name=\"mediaId\"]").unwrap();
     let download_url = if let Some(form) = doc.select(&form_sel).next() {
+        let action = form.value().attr("action").unwrap_or("");
+        let action_url = if action.is_empty() {
+            DL_BASE.to_string()
+        } else if action.starts_with("http") {
+            action.to_string()
+        } else if action.starts_with("//") {
+            format!("https:{}", action)
+        } else if action.starts_with('/') {
+            format!("{}{}", BASE, action)
+        } else {
+            format!("{}/{}", DL_BASE, action)
+        };
         if let Some(input) = form.select(&input_sel).next() {
             let media_id = input.value().attr("value").unwrap_or(id);
-            format!("{}?mediaId={}", DL_BASE, media_id)
+            format!("{}?mediaId={}", action_url, media_id)
         } else {
-            format!("{}?mediaId={}", DL_BASE, id)
+            format!("{}?mediaId={}", action_url, id)
         }
     } else {
         format!("{}?mediaId={}", DL_BASE, id)
@@ -428,6 +460,133 @@ pub async fn do_download(url: &str, path: &str) -> Result<(), String> {
         return Err(format!("HTTP {}", resp.status()));
     }
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
+    }
     tokio::fs::write(path, &bytes).await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn extract_media_id(url: &str) -> Option<String> {
+    url.split("mediaId=").nth(1).map(|s| s.split('&').next().unwrap_or(s).to_string())
+}
+
+pub async fn do_download_with_progress(
+    client: &reqwest::Client,
+    url: &str,
+    path: &str,
+    page_url: &str,
+    mut on_progress: impl FnMut(f32),
+) -> Result<(), String> {
+    tracing::info!("[download] visiting page: {}", page_url);
+    let page_resp = client.get(page_url).send().await.map_err(|e| e.to_string())?;
+    tracing::info!("[download] page response: {}", page_resp.status());
+
+    tracing::info!("[download] requesting file: {}", url);
+    let resp = client
+        .get(url)
+        .header("referer", page_url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    tracing::info!("[download] download response: {}", resp.status());
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        tracing::error!("[download] failed: status={}, body={}", status, body);
+        return Err(format!("HTTP {} - {}", status, body));
+    }
+
+    let total = resp.content_length().unwrap_or(0) as f64;
+    let mut stream = resp.bytes_stream();
+
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
+    }
+
+    let mut file = tokio::fs::File::create(path).await.map_err(|e| e.to_string())?;
+    let mut downloaded: u64 = 0;
+
+    use futures_util::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+            .await
+            .map_err(|e| e.to_string())?;
+        downloaded += chunk.len() as u64;
+        if total > 0.0 {
+            on_progress((downloaded as f64 / total) as f32);
+        }
+    }
+
+    on_progress(1.0);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore = "hits external network"]
+    async fn test_download_with_progress_writes_file() {
+        let client = client();
+        let url = "https://httpbin.org/bytes/100?mediaId=test123";
+        let path = std::env::temp_dir().join("vimms_test_download.bin");
+        let path_str = path.to_string_lossy().to_string();
+
+        let mut progress_values = Vec::new();
+        let result = do_download_with_progress(
+            &client,
+            url,
+            &path_str,
+            "https://httpbin.org/",
+            |p| progress_values.push(p),
+        )
+        .await;
+
+        assert!(result.is_ok(), "download failed: {:?}", result.err());
+        assert!(path.exists(), "file was not created");
+
+        let meta = tokio::fs::metadata(&path).await.unwrap();
+        assert_eq!(meta.len(), 100, "downloaded file size mismatch");
+
+        assert!(!progress_values.is_empty(), "progress callback was never called");
+        assert!(progress_values.last().unwrap() >= &0.99, "progress did not reach near 1.0");
+
+        let _ = tokio::fs::remove_file(&path).await;
+    }
+
+    #[tokio::test]
+    async fn test_download_with_progress_bad_url_fails() {
+        let client = client();
+        let path = std::env::temp_dir().join("vimms_test_download_fail.bin");
+        let path_str = path.to_string_lossy().to_string();
+
+        let result = do_download_with_progress(
+            &client,
+            "https://invalid.invalid.invalid/file?mediaId=123",
+            &path_str,
+            "https://invalid.invalid.invalid/",
+            |_p| {},
+        )
+        .await;
+
+        assert!(result.is_err(), "expected download to fail with bad url");
+        assert!(!path.exists(), "file should not be created on failure");
+    }
+
+    #[test]
+    fn test_extract_media_id() {
+        assert_eq!(
+            extract_media_id("https://dl2.vimm.net?mediaId=87558"),
+            Some("87558".to_string())
+        );
+        assert_eq!(
+            extract_media_id("https://dl.vimm.net/download?mediaId=abc&other=x"),
+            Some("abc".to_string())
+        );
+        assert_eq!(extract_media_id("https://dl2.vimm.net"), None);
+    }
 }

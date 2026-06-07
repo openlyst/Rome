@@ -6,6 +6,49 @@ use crate::Route;
 #[component]
 pub fn AppShell() -> Element {
     use_context_provider(|| AppState::new());
+    let mut state = use_context::<AppState>();
+
+    use_effect(move || {
+        spawn(async move {
+            loop {
+                let maybe_task = {
+                    let tasks = state.downloads.read();
+                    tasks.iter()
+                        .find(|t| matches!(t.status, crate::models::DownloadStatus::Queued))
+                        .cloned()
+                };
+
+                if let Some(task) = maybe_task {
+                    let id = task.id;
+                    let url = task.rom.download_url.clone();
+                    let path = task.save_path.clone();
+
+                    tracing::info!("[queue] starting download id={} name={}", id, task.rom.name);
+                    state.update_download_status(id, crate::models::DownloadStatus::Downloading);
+
+                    let page_url = task.rom.page_url.clone();
+                    let c = crate::api::client();
+                    let result = crate::api::do_download_with_progress(&c, &url, &path, &page_url, move |p| {
+                        state.update_download_progress(id, p);
+                    }).await;
+
+                    match result {
+                        Ok(()) => {
+                            tracing::info!("[queue] download completed id={}", id);
+                            state.update_download_status(id, crate::models::DownloadStatus::Done);
+                        }
+                        Err(e) => {
+                            tracing::error!("[queue] download failed id={} error={}", id, e);
+                            state.update_download_status(id, crate::models::DownloadStatus::Failed(e));
+                        }
+                    }
+                }
+
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+        });
+    });
+
     let mut sidebar_width = use_signal(|| 220_i32);
     let mut is_dragging = use_signal(|| false);
 
