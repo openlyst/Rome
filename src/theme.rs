@@ -1,0 +1,12 @@
+pub const BG: &str = "#0d0d12";
+pub const SURFACE: &str = "#16161d";
+pub const CARD: &str = "#1a1a24";
+pub const CARD_HOVER: &str = "#22222e";
+pub const BORDER: &str = "#2a2a35";
+pub const TEXT: &str = "#e2e2ea";
+pub const TEXT_DIM: &str = "#8b8b9a";
+pub const ACCENT: &str = "#4a9eff";
+pub const ACCENT_HOVER: &str = "#6cb3ff";
+pub const SUCCESS: &str = "#4caf7a";
+pub const ERROR: &str = "#ef5555";
+pub const WARNING: &str = "#f5a623";
