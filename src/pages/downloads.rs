@@ -7,6 +7,9 @@ use crate::theme::*;
 pub fn DownloadsPage() -> Element {
     let state = use_context::<AppState>();
     let tasks = state.downloads.read().clone();
+    let downloaded = state.downloaded_roms.read().clone();
+    let has_active = !tasks.is_empty();
+    let has_downloaded = !downloaded.is_empty();
 
     rsx! {
         div {
@@ -14,16 +17,28 @@ pub fn DownloadsPage() -> Element {
 
             h2 { style: "color: {TEXT}; margin: 0; font-size: 24px;", "Downloads" }
 
-            if tasks.is_empty() {
+            if !has_active && !has_downloaded {
                 div {
                     style: "padding: 60px; text-align: center; color: {TEXT_DIM}; font-size: 14px;",
-                    "No active downloads. Search for a game and hit Download."
+                    "No downloads yet. Search for a game and hit Download."
                 }
-            } else {
+            }
+
+            if has_active {
                 div {
                     style: "display: flex; flex-direction: column; gap: 10px;",
                     for task in tasks {
                         DownloadRow { task: task.clone() }
+                    }
+                }
+            }
+
+            if has_downloaded {
+                div {
+                    style: "display: flex; flex-direction: column; gap: 10px;",
+                    h3 { style: "color: {TEXT}; margin: 0; font-size: 16px;", "Downloaded" }
+                    for rom in downloaded {
+                        DownloadedRow { rom: rom.clone() }
                     }
                 }
             }
@@ -52,6 +67,10 @@ fn DownloadRow(task: crate::models::DownloadTask) -> Element {
 
     let is_done = matches!(&task.status, DownloadStatus::Done);
     let task_id = task.id;
+    let display_path = std::path::Path::new(&task.save_path)
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| task.save_path.clone());
 
     rsx! {
         div {
@@ -62,7 +81,7 @@ fn DownloadRow(task: crate::models::DownloadTask) -> Element {
                 div {
                     style: "display: flex; flex-direction: column; gap: 2px;",
                     span { style: "color: {TEXT}; font-size: 14px; font-weight: 600;", "{task.rom.name}" }
-                    span { style: "color: {TEXT_DIM}; font-size: 12px;", "{task.save_path}" }
+                    span { style: "color: {TEXT_DIM}; font-size: 12px;", "{display_path}" }
                 }
                 div {
                     style: "display: flex; align-items: center; gap: 8px;",
@@ -84,6 +103,29 @@ fn DownloadRow(task: crate::models::DownloadTask) -> Element {
                         style: "height: 100%; width: {task.progress * 100.0}%; background: {ACCENT}; border-radius: 2px;",
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn DownloadedRow(rom: crate::models::Rom) -> Element {
+    let mut state = use_context::<AppState>();
+    let rom_id = rom.id.clone();
+    let rom_name = rom.name.clone();
+
+    rsx! {
+        div {
+            style: "padding: 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;",
+            div {
+                style: "display: flex; flex-direction: column; gap: 2px;",
+                span { style: "color: {TEXT}; font-size: 14px; font-weight: 600;", "{rom_name}" }
+                span { style: "color: {SUCCESS}; font-size: 12px; font-weight: 600;", "Downloaded" }
+            }
+            button {
+                onclick: move |_| state.remove_downloaded(&rom_id),
+                style: "padding: 4px 10px; background: transparent; color: {TEXT_DIM}; border: 1px solid {BORDER}; border-radius: 4px; font-size: 11px; cursor: pointer;",
+                "Remove"
             }
         }
     }

@@ -36,6 +36,63 @@ pub fn AppShell() -> Element {
                         Ok(()) => {
                             tracing::info!("[queue] download completed id={}", id);
                             state.update_download_status(id, crate::models::DownloadStatus::Done);
+                            state.mark_downloaded(task.rom.clone());
+
+                            let rom_id = task.rom.id.clone();
+                            let rom_name = task.rom.name.clone();
+                            let sys = if task.rom.system.is_empty() {
+                                "unknown".to_string()
+                            } else {
+                                task.rom.system.to_lowercase().replace(" ", "").replace("-", "")
+                            };
+                            let settings = state.settings.read();
+                            let base_dir = std::path::PathBuf::from(&settings.download_dir).join(&sys);
+
+                            // Extract zip
+                            tracing::info!("[queue] extracting zip for id={}", id);
+                            if let Err(e) = crate::api::extract_zip(&task.save_path, &base_dir.to_string_lossy()).await {
+                                tracing::warn!("[queue] zip extraction failed for {}: {}", rom_name, e);
+                            } else {
+                                // Remove zip after extraction
+                                let _ = tokio::fs::remove_file(&task.save_path).await;
+                            }
+
+                            // Download box art
+                            let box_path = base_dir.join(format!("{}_icon.png", rom_id));
+                            if let Err(e) = crate::api::download_image(&rom_id, "box", &box_path.to_string_lossy()).await {
+                                tracing::warn!("[queue] box art download failed for {}: {}", rom_name, e);
+                            }
+
+                            // Save metadata JSON next to extracted files
+                            let json_path = base_dir.join(format!("{}_info.json", rom_id));
+                            if let Ok(json) = serde_json::to_string_pretty(&task.rom) {
+                                if let Err(e) = tokio::fs::write(&json_path, json).await {
+                                    tracing::warn!("[queue] metadata save failed for {}: {}", rom_name, e);
+                                }
+                            }
+
+                            // Update main.json tracker
+                            let main_path = std::path::PathBuf::from(&settings.download_dir).join("main.json");
+                            let mut tracker = if main_path.exists() {
+                                match tokio::fs::read_to_string(&main_path).await {
+                                    Ok(text) => serde_json::from_str(&text).unwrap_or_else(|_| serde_json::Map::new()),
+                                    Err(_) => serde_json::Map::new(),
+                                }
+                            } else {
+                                serde_json::Map::new()
+                            };
+                            let entry = serde_json::json!({
+                                "name": task.rom.name,
+                                "system": task.rom.system,
+                                "folder": sys,
+                                "file_name": task.rom.file_name,
+                            });
+                            tracker.insert(rom_id.clone(), entry);
+                            if let Ok(text) = serde_json::to_string_pretty(&tracker) {
+                                if let Err(e) = tokio::fs::write(&main_path, text).await {
+                                    tracing::warn!("[queue] main.json update failed for {}: {}", rom_name, e);
+                                }
+                            }
                         }
                         Err(e) => {
                             tracing::error!("[queue] download failed id={} error={}", id, e);

@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Rom {
     pub id: String,
     pub name: String,
@@ -103,7 +104,6 @@ impl DownloadTask {
 #[derive(Clone, Debug, Default)]
 pub struct AppSettings {
     pub download_dir: String,
-    pub auto_extract: bool,
     pub regions: Vec<i32>,
     pub version_filter: String, // "new", "old", "all"
 }
