@@ -47,17 +47,27 @@ fn GameDetail(rom: Rom) -> Element {
     let rom_for_dl = rom.clone();
     let rom_page = rom.page_url.clone();
 
+    let image_data = use_resource(move || {
+        let id = rom.id.clone();
+        async move {
+            api::fetch_image_data_url(&id, "box").await.ok()
+        }
+    });
+
     rsx! {
         div {
             style: "display: flex; flex-direction: column; gap: 16px; max-width: 720px;",
 
             h1 { style: "color: {TEXT}; margin: 0; font-size: 26px; font-weight: 700;", "{rom.name}" }
 
-            if !rom.image_url.is_empty() {
-                img {
-                    src: rom.image_url.clone(),
-                    style: "max-width: 200px; max-height: 280px; object-fit: contain; border-radius: 8px;",
-                }
+            match &*image_data.read_unchecked() {
+                Some(Some(data_url)) => rsx! {
+                    img {
+                        src: data_url.clone(),
+                        style: "max-width: 200px; max-height: 280px; object-fit: contain; border-radius: 8px;",
+                    }
+                },
+                _ => rsx! { "" }
             }
 
             if !rom.description.is_empty() {

@@ -1,4 +1,5 @@
 use crate::models::{Console, Rom};
+use base64::{Engine as _, engine::general_purpose};
 use scraper::{Html, Selector};
 
 const BASE: &str = "https://vimm.net";
@@ -196,6 +197,31 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     }
 
     Ok(rom)
+}
+
+pub async fn fetch_image_data_url(id: &str, image_type: &str) -> Result<String, String> {
+    let url = format!("https://dl.vimm.net/image.php?type={}&id={}", image_type, id);
+    let resp = client()
+        .get(&url)
+        .header("Referer", format!("https://vimm.net/vault/{}", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+
+    let content_type = resp.headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("image/png")
+        .to_string();
+
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    let b64 = general_purpose::STANDARD.encode(&bytes);
+
+    Ok(format!("data:{};base64,{}", content_type, b64))
 }
 
 pub async fn do_download(url: &str, path: &str) -> Result<(), String> {

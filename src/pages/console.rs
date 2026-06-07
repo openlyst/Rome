@@ -90,17 +90,31 @@ fn RomCard(rom: Rom) -> Element {
     let mut state = use_context::<AppState>();
     let nav = use_navigator();
     let rom_id = rom.id.clone();
+    let rom_for_click = rom.clone();
+
+    let image_data = use_resource(move || {
+        let id = rom.id.clone();
+        async move {
+            api::fetch_image_data_url(&id, "box").await.ok()
+        }
+    });
+
     rsx! {
         div {
             onclick: move |_| {
-                state.current_rom.set(Some(rom.clone()));
+                state.current_rom.set(Some(rom_for_click.clone()));
                 let _ = nav.push(crate::Route::Game { id: rom_id.clone() });
             },
             style: "padding: 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; cursor: pointer; display: flex; gap: 12px;",
-            if !rom.image_url.is_empty() {
-                img {
-                    src: rom.image_url.clone(),
-                    style: "width: 60px; height: 60px; object-fit: contain; border-radius: 4px; flex-shrink: 0;",
+            match &*image_data.read_unchecked() {
+                Some(Some(data_url)) => rsx! {
+                    img {
+                        src: data_url.clone(),
+                        style: "width: 60px; height: 60px; object-fit: contain; border-radius: 4px; flex-shrink: 0;",
+                    }
+                },
+                _ => rsx! {
+                    div { style: "width: 60px; height: 60px; background: {SURFACE}; border-radius: 4px; flex-shrink: 0;" }
                 }
             }
             div {
