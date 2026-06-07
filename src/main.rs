@@ -61,6 +61,8 @@ fn main() {
                     .with_inner_size(dioxus::desktop::LogicalSize::new(1200, 800))
             )
             .with_disable_context_menu(true)
+            .with_background_color((13, 13, 18, 255))
+            .with_custom_head(r#"<style>body,html{margin:0;padding:0;background:#0d0d12;}</style>"#.to_string())
         )
         .launch(App);
 }
