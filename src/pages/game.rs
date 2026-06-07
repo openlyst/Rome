@@ -51,14 +51,6 @@ fn GameDetail(rom: Rom) -> Element {
         div {
             style: "display: flex; flex-direction: column; gap: 16px; max-width: 720px;",
 
-            if !rom.image_url.is_empty() {
-                img {
-                    src: "{rom.image_url}",
-                    alt: "{rom.name} box art",
-                    style: "max-width: 240px; max-height: 340px; border-radius: 8px; border: 1px solid {BORDER}; object-fit: contain;",
-                }
-            }
-
             h1 { style: "color: {TEXT}; margin: 0; font-size: 26px; font-weight: 700;", "{rom.name}" }
 
             if !rom.description.is_empty() {
