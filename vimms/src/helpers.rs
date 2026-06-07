@@ -193,10 +193,11 @@ impl VimmsLairHelper {
     ) {
         for system in roms.iter_mut() {
             for section in system.sections.iter_mut() {
+                let folder_upper = section.section.chars().last().unwrap_or(' ').to_string().to_uppercase();
                 let folder = if section.section.contains("number") {
                     "#"
                 } else {
-                    section.section.chars().last().unwrap_or(' ').to_string().to_uppercase().as_str()
+                    folder_upper.as_str()
                 };
                 section.path = Path::new(home_dir)
                     .join(&self.roms_directory)

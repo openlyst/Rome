@@ -597,8 +597,7 @@ fn extract_file(path: &str, name: &str) {
         }
     }
     if file_type.to_lowercase() == "7z" {
-        if let Ok(file) = File::open(&full_path) {
-            if let Ok(mut sz) = sevenz_rust::SevenZReader::open(file) {
+        if let Ok(mut sz) = sevenz_rust::SevenZReader::open(&full_path, sevenz_rust::Password::from("")) {
                 let _ = sz.for_each_entries(|entry, reader| {
                     let outpath = Path::new(&dir_path).join(entry.name());
                     if entry.is_directory() {
@@ -614,7 +613,6 @@ fn extract_file(path: &str, name: &str) {
                     }
                     Ok(true)
                 });
-            }
         }
     }
 }
