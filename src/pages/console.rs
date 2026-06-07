@@ -46,15 +46,11 @@ pub fn ConsolePage(slug: String) -> Element {
                                 }
                                 if count < total {
                                     div {
-                                        style: "grid-column: 1 / -1; display: flex; justify-content: center; padding: 16px;",
-                                        button {
-                                            onclick: move |_| {
-                                                let current = *visible_count.read();
-                                                visible_count.set(current + 30);
-                                            },
-                                            style: "padding: 10px 28px; background: {CARD}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 8px; font-size: 14px; cursor: pointer;",
-                                            "Load More"
-                                        }
+                                        onvisible: move |_| {
+                                            let current = *visible_count.read();
+                                            visible_count.set(current + 30);
+                                        },
+                                        style: "grid-column: 1 / -1; height: 1px;",
                                     }
                                 }
                             }
