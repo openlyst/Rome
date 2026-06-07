@@ -37,7 +37,7 @@ pub fn ConsolePage(slug: String) -> Element {
             match &*roms.read_unchecked() {
                 Some(list) => rsx! {
                     div {
-                        style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;",
+                        style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 24px;",
                         for rom in list.clone() {
                             RomCard { rom: rom.clone() }
                         }
@@ -105,23 +105,24 @@ fn RomCard(rom: Rom) -> Element {
                 state.current_rom.set(Some(rom_for_click.clone()));
                 let _ = nav.push(crate::Route::Game { id: rom_id.clone() });
             },
-            style: "padding: 14px; background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; cursor: pointer; display: flex; gap: 12px;",
-            match &*image_data.read_unchecked() {
-                Some(Some(data_url)) => rsx! {
-                    img {
-                        src: data_url.clone(),
-                        style: "width: 60px; height: 60px; object-fit: contain; border-radius: 4px; flex-shrink: 0;",
-                    }
-                },
-                _ => rsx! {
-                    div { style: "width: 60px; height: 60px; background: {SURFACE}; border-radius: 4px; flex-shrink: 0;" }
-                }
-            }
+            style: "cursor: pointer; display: flex; flex-direction: column; gap: 8px;",
             div {
-                style: "display: flex; flex-direction: column; gap: 6px;",
-                div { style: "color: {TEXT}; font-size: 14px; font-weight: 600; line-height: 1.3;", "{rom.name}" }
-                div { style: "color: {TEXT_DIM}; font-size: 12px;", "{rom.region}" }
-                div { style: "color: {TEXT_DIM}; font-size: 11px;", "v{rom.version}" }
+                style: "position: relative; width: 100%; aspect-ratio: 2/3; border-radius: 4px; overflow: hidden; background: {SURFACE}; border: 1px solid {BORDER};",
+                match &*image_data.read_unchecked() {
+                    Some(Some(data_url)) => rsx! {
+                        img {
+                            src: data_url.clone(),
+                            style: "width: 100%; height: 100%; object-fit: cover; display: block;",
+                        }
+                    },
+                    _ => rsx! {
+                        div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: {TEXT_DIM}; font-size: 12px;", "Loading..." }
+                    }
+                }
+                div {
+                    style: "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 8px 8px 8px; background: linear-gradient(transparent, rgba(0,0,0,0.85));",
+                    div { style: "color: #fff; font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;", "{rom.name}" }
+                }
             }
         }
     }
