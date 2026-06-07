@@ -24,7 +24,6 @@ pub fn HomePage() -> Element {
             div {
                 style: "display: flex; align-items: center; gap: 12px;",
                 h1 { style: "color: {TEXT}; margin: 0; font-size: 28px; font-weight: 700;", "Vimm's Lair" }
-                span { style: "color: {TEXT_DIM}; font-size: 14px;", "ROM downloader" }
             }
 
             div {
