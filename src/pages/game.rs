@@ -42,6 +42,7 @@ pub fn GamePage(id: String) -> Element {
 #[component]
 fn GameDetail(rom: Rom) -> Element {
     let mut state = use_context::<AppState>();
+    let nav = use_navigator();
     let already_queued = state.downloads.read().iter().any(|d| d.rom.id == rom.id);
 
     let rom_for_dl = rom.clone();
@@ -62,6 +63,15 @@ fn GameDetail(rom: Rom) -> Element {
     rsx! {
         div {
             style: "display: flex; flex-direction: column; gap: 20px;",
+
+            div {
+                style: "display: flex; align-items: center; gap: 12px;",
+                button {
+                    onclick: move |_| { let _ = nav.go_back(); },
+                    style: "padding: 6px 14px; background: {CARD}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 6px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;",
+                    "\u{2190} Back"
+                }
+            }
 
             h1 { style: "color: {TEXT}; margin: 0; font-size: 26px; font-weight: 700;", "{rom.name}" }
 
