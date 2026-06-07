@@ -15,6 +15,7 @@ pub struct Rom {
     pub size: String,
     pub rating: String,
     pub description: String,
+    pub image_url: String,
 }
 
 impl Rom {
@@ -33,6 +34,7 @@ impl Rom {
             size: String::new(),
             rating: String::new(),
             description: String::new(),
+            image_url: String::new(),
         }
     }
 }

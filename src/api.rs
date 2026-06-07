@@ -90,6 +90,7 @@ fn parse_table_rows(document: &Html) -> Vec<Rom> {
         let page_url = format!("{}{}", BASE, href);
         let id = href.split('/').last().unwrap_or("").to_string();
         let download_url = format!("{}?mediaId={}", DL_BASE, id);
+        let image_url = format!("https://dl.vimm.net/image.php?type=box&id={}", id);
 
         let region = if let Some(rtd) = region_td {
             let imgs: Vec<_> = rtd.select(&img_sel).collect();
@@ -136,6 +137,7 @@ fn parse_table_rows(document: &Html) -> Vec<Rom> {
             size: String::new(),
             rating: String::new(),
             description: String::new(),
+            image_url,
         });
     }
     roms
@@ -186,6 +188,7 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     let mut rom = Rom::new_basic(String::new(), url.clone(), download_url);
     rom.id = id.to_string();
     rom.description = description;
+    rom.image_url = format!("https://dl.vimm.net/image.php?type=box&id={}", id);
 
     let title_sel = Selector::parse("h2").unwrap();
     if let Some(h2) = doc.select(&title_sel).next() {
