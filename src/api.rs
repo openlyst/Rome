@@ -197,6 +197,28 @@ pub async fn fetch_section(console: &str, section: &str) -> Result<Vec<Rom>, Str
     Ok(roms)
 }
 
+pub async fn fetch_all_sections(console: &str) -> Result<Vec<Rom>, String> {
+    let sections: Vec<String> = std::iter::once("number".to_string())
+        .chain(('A'..='Z').map(|c| c.to_string()))
+        .collect();
+
+    let mut join_set = tokio::task::JoinSet::new();
+    for sec in sections {
+        let slug = console.to_string();
+        join_set.spawn(async move { fetch_section(&slug, &sec).await });
+    }
+
+    let mut all_roms = Vec::new();
+    while let Some(res) = join_set.join_next().await {
+        if let Ok(Ok(roms)) = res {
+            all_roms.extend(roms);
+        }
+    }
+
+    all_roms.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(all_roms)
+}
+
 pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
     {
         let cache = GAME_DETAIL_CACHE.lock().unwrap();

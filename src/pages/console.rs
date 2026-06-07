@@ -6,15 +6,12 @@ use crate::theme::*;
 
 #[component]
 pub fn ConsolePage(slug: String) -> Element {
-    let section = use_signal(|| 'A'.to_string());
     let slug_for_api = slug.clone();
 
     let roms = use_resource(move || {
         let slug = slug_for_api.clone();
         async move {
-            let sec = section.read().clone();
-            let sec_param = if sec == "#" { "number" } else { &sec };
-            api::fetch_section(&slug, sec_param).await.unwrap_or_default()
+            api::fetch_all_sections(&slug).await.unwrap_or_default()
         }
     });
 
@@ -24,8 +21,6 @@ pub fn ConsolePage(slug: String) -> Element {
         .map(|c| c.name)
         .unwrap_or_else(|| slug.clone());
 
-    let current_sec = section.read().clone();
-
     rsx! {
         div {
             style: "display: flex; flex-direction: column; height: 100%; background: {BG};",
@@ -33,7 +28,6 @@ pub fn ConsolePage(slug: String) -> Element {
             div {
                 style: "flex-shrink: 0; padding: 24px 24px 16px 24px; gap: 16px; display: flex; flex-direction: column; border-bottom: 1px solid {BORDER}; background: {BG};",
                 h2 { style: "color: {TEXT}; margin: 0; font-size: 24px;", "{console_name}" }
-                SectionBar { section, current_sec }
             }
 
             div {
@@ -52,40 +46,6 @@ pub fn ConsolePage(slug: String) -> Element {
                     }
                 }
             }
-        }
-    }
-}
-
-#[component]
-fn SectionBar(section: Signal<String>, current_sec: String) -> Element {
-    let all: Vec<String> = std::iter::once("#".to_string())
-        .chain(('A'..='Z').map(|c| c.to_string()))
-        .collect();
-
-    rsx! {
-        div {
-            style: "display: flex; flex-wrap: wrap; gap: 6px;",
-            for sec in all {
-                SectionButton { section, sec: sec.clone(), current_sec: current_sec.clone() }
-            }
-        }
-    }
-}
-
-#[component]
-fn SectionButton(section: Signal<String>, sec: String, current_sec: String) -> Element {
-    let is_active = sec == current_sec;
-    let style = if is_active {
-        format!("padding: 6px 12px; background: {ACCENT}; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600;")
-    } else {
-        format!("padding: 6px 12px; background: {CARD}; color: {TEXT_DIM}; border: 1px solid {BORDER}; border-radius: 6px; font-size: 13px; cursor: pointer;")
-    };
-    let sec_clone = sec.clone();
-    rsx! {
-        button {
-            onclick: move |_| section.set(sec_clone.clone()),
-            style: "{style}",
-            "{sec}"
         }
     }
 }
