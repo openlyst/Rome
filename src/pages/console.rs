@@ -28,23 +28,28 @@ pub fn ConsolePage(slug: String) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; height: 100%; padding: 24px; gap: 16px; overflow-y: auto;",
+            style: "display: flex; flex-direction: column; height: 100%; background: {BG};",
 
-            h2 { style: "color: {TEXT}; margin: 0; font-size: 24px;", "{console_name}" }
+            div {
+                style: "flex-shrink: 0; padding: 24px 24px 16px 24px; gap: 16px; display: flex; flex-direction: column; border-bottom: 1px solid {BORDER}; background: {BG};",
+                h2 { style: "color: {TEXT}; margin: 0; font-size: 24px;", "{console_name}" }
+                SectionBar { section, current_sec }
+            }
 
-            SectionBar { section, current_sec }
-
-            match &*roms.read_unchecked() {
-                Some(list) => rsx! {
-                    div {
-                        style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 24px;",
-                        for rom in list.clone() {
-                            RomCard { rom: rom.clone() }
+            div {
+                style: "flex: 1; overflow-y: auto; padding: 16px 24px 24px 24px; min-height: 0;",
+                match &*roms.read_unchecked() {
+                    Some(list) => rsx! {
+                        div {
+                            style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 24px;",
+                            for rom in list.clone() {
+                                RomCard { rom: rom.clone() }
+                            }
                         }
+                    },
+                    None => rsx! {
+                        div { style: "color: {TEXT_DIM}; padding: 40px;", "Loading..." }
                     }
-                },
-                None => rsx! {
-                    div { style: "color: {TEXT_DIM}; padding: 40px;", "Loading..." }
                 }
             }
         }
