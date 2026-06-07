@@ -95,6 +95,7 @@ fn RomCard(rom: Rom) -> Element {
     let mut state = use_context::<AppState>();
     let nav = use_navigator();
     let rom_id = rom.id.clone();
+    let rom_id_hover = rom.id.clone();
     let rom_for_click = rom.clone();
 
     let image_data = use_resource(move || {
@@ -109,6 +110,12 @@ fn RomCard(rom: Rom) -> Element {
             onclick: move |_| {
                 state.current_rom.set(Some(rom_for_click.clone()));
                 let _ = nav.push(crate::Route::Game { id: rom_id.clone() });
+            },
+            onmouseenter: move |_| {
+                let id = rom_id_hover.clone();
+                spawn(async move {
+                    api::preload_game(&id).await;
+                });
             },
             style: "cursor: pointer; display: flex; flex-direction: column; gap: 8px;",
             div {

@@ -1,9 +1,18 @@
 use crate::models::{Console, Rom};
 use base64::{Engine as _, engine::general_purpose};
+use lazy_static::lazy_static;
 use scraper::{Html, Selector};
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 const BASE: &str = "https://vimm.net";
 const DL_BASE: &str = "https://dl2.vimm.net";
+
+lazy_static! {
+    static ref IMAGE_CACHE: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
+    static ref GAME_DETAIL_CACHE: Mutex<HashMap<String, Rom>> = Mutex::new(HashMap::new());
+    static ref SECTION_CACHE: Mutex<HashMap<String, Vec<Rom>>> = Mutex::new(HashMap::new());
+}
 
 fn client() -> reqwest::Client {
     reqwest::Client::builder()
@@ -165,14 +174,37 @@ pub async fn search(query: &str, system: Option<&str>) -> Result<Vec<Rom>, Strin
 }
 
 pub async fn fetch_section(console: &str, section: &str) -> Result<Vec<Rom>, String> {
+    let cache_key = format!("{}:{}", console, section);
+
+    {
+        let cache = SECTION_CACHE.lock().unwrap();
+        if let Some(cached) = cache.get(&cache_key) {
+            return Ok(cached.clone());
+        }
+    }
+
     let url = format!("{}/vault/?p=list&action=filters&system={}&section={}&version=new", BASE, console, section);
     let resp = client().get(&url).send().await.map_err(|e| e.to_string())?;
     let text = resp.text().await.map_err(|e| e.to_string())?;
     let doc = Html::parse_document(&text);
-    Ok(parse_table_rows(&doc))
+    let roms = parse_table_rows(&doc);
+
+    {
+        let mut cache = SECTION_CACHE.lock().unwrap();
+        cache.insert(cache_key, roms.clone());
+    }
+
+    Ok(roms)
 }
 
 pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
+    {
+        let cache = GAME_DETAIL_CACHE.lock().unwrap();
+        if let Some(cached) = cache.get(id) {
+            return Ok(cached.clone());
+        }
+    }
+
     let url = format!("{}/vault/{}", BASE, id);
     let resp = client().get(&url).send().await.map_err(|e| e.to_string())?;
     let text = resp.text().await.map_err(|e| e.to_string())?;
@@ -296,10 +328,24 @@ pub async fn fetch_game_detail(id: &str) -> Result<Rom, String> {
         }
     }
 
+    {
+        let mut cache = GAME_DETAIL_CACHE.lock().unwrap();
+        cache.insert(id.to_string(), rom.clone());
+    }
+
     Ok(rom)
 }
 
 pub async fn fetch_image_data_url(id: &str, image_type: &str) -> Result<String, String> {
+    let cache_key = format!("{}:{}", image_type, id);
+
+    {
+        let cache = IMAGE_CACHE.lock().unwrap();
+        if let Some(cached) = cache.get(&cache_key) {
+            return Ok(cached.clone());
+        }
+    }
+
     let url = format!("https://dl.vimm.net/image.php?type={}&id={}", image_type, id);
     let resp = client()
         .get(&url)
@@ -320,8 +366,23 @@ pub async fn fetch_image_data_url(id: &str, image_type: &str) -> Result<String, 
 
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
     let b64 = general_purpose::STANDARD.encode(&bytes);
+    let result = format!("data:{};base64,{}", content_type, b64);
 
-    Ok(format!("data:{};base64,{}", content_type, b64))
+    {
+        let mut cache = IMAGE_CACHE.lock().unwrap();
+        cache.insert(cache_key, result.clone());
+    }
+
+    Ok(result)
+}
+
+pub async fn preload_game(id: &str) {
+    if fetch_game_detail(id).await.is_ok() {
+        let _ = tokio::join!(
+            fetch_image_data_url(id, "box"),
+            fetch_image_data_url(id, "screen"),
+        );
+    }
 }
 
 pub async fn do_download(url: &str, path: &str) -> Result<(), String> {

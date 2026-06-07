@@ -46,20 +46,16 @@ fn GameDetail(rom: Rom) -> Element {
 
     let rom_for_dl = rom.clone();
     let rom_page = rom.page_url.clone();
-    let rom_id_box = rom.id.clone();
-    let rom_id_screen = rom.id.clone();
+    let rom_id_images = rom.id.clone();
 
-    let box_image = use_resource(move || {
-        let id = rom_id_box.clone();
+    let images = use_resource(move || {
+        let id = rom_id_images.clone();
         async move {
-            api::fetch_image_data_url(&id, "box").await.ok()
-        }
-    });
-
-    let screen_image = use_resource(move || {
-        let id = rom_id_screen.clone();
-        async move {
-            api::fetch_image_data_url(&id, "screen").await.ok()
+            let (box_img, screen_img) = tokio::join!(
+                api::fetch_image_data_url(&id, "box"),
+                api::fetch_image_data_url(&id, "screen"),
+            );
+            (box_img.ok(), screen_img.ok())
         }
     });
 
@@ -129,28 +125,27 @@ fn GameDetail(rom: Rom) -> Element {
                 // Images (right side)
                 div {
                     style: "display: flex; flex-direction: column; gap: 16px; flex: 1 1 220px;",
-                    match &*screen_image.read_unchecked() {
-                        Some(Some(data_url)) => rsx! {
-                            div {
-                                style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
-                                img {
-                                    src: data_url.clone(),
-                                    style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                    match &*images.read_unchecked() {
+                        Some((screen_opt, box_opt)) => rsx! {
+                            if let Some(data_url) = screen_opt {
+                                div {
+                                    style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
+                                    img {
+                                        src: data_url.clone(),
+                                        style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                                    }
+                                    div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Title screen" }
                                 }
-                                div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Title screen" }
                             }
-                        },
-                        _ => rsx! { "" }
-                    }
-                    match &*box_image.read_unchecked() {
-                        Some(Some(data_url)) => rsx! {
-                            div {
-                                style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
-                                img {
-                                    src: data_url.clone(),
-                                    style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                            if let Some(data_url) = box_opt {
+                                div {
+                                    style: "background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; overflow: hidden; padding: 8px;",
+                                    img {
+                                        src: data_url.clone(),
+                                        style: "width: 100%; height: auto; object-fit: contain; display: block; border-radius: 4px;",
+                                    }
+                                    div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Box" }
                                 }
-                                div { style: "text-align: center; color: {TEXT_DIM}; font-size: 11px; padding-top: 6px;", "Box" }
                             }
                         },
                         _ => rsx! { "" }
