@@ -6,6 +6,7 @@ use crate::theme::*;
 
 #[component]
 pub fn ConsolePage(slug: String) -> Element {
+    let mut visible_count = use_signal(|| 36);
     let slug_for_api = slug.clone();
 
     let roms = use_resource(move || {
@@ -33,14 +34,32 @@ pub fn ConsolePage(slug: String) -> Element {
             div {
                 style: "flex: 1; overflow-y: auto; padding: 16px 24px 24px 24px; min-height: 0;",
                 match &*roms.read_unchecked() {
-                    Some(list) => rsx! {
-                        div {
-                            style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 24px;",
-                            for rom in list.clone() {
-                                RomCard { rom: rom.clone() }
+                    Some(list) => {
+                        let total = list.len();
+                        let count = (*visible_count.read()).min(total);
+                        let visible = list[..count].to_vec();
+                        rsx! {
+                            div {
+                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 24px;",
+                                for rom in visible {
+                                    RomCard { rom: rom.clone() }
+                                }
+                                if count < total {
+                                    div {
+                                        style: "grid-column: 1 / -1; display: flex; justify-content: center; padding: 16px;",
+                                        button {
+                                            onclick: move |_| {
+                                                let current = *visible_count.read();
+                                                visible_count.set(current + 30);
+                                            },
+                                            style: "padding: 10px 28px; background: {CARD}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 8px; font-size: 14px; cursor: pointer;",
+                                            "Load More"
+                                        }
+                                    }
+                                }
                             }
                         }
-                    },
+                    }
                     None => rsx! {
                         div { style: "color: {TEXT_DIM}; padding: 40px;", "Loading..." }
                     }
